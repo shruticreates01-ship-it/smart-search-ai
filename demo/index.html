@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartSearch AI — Natural Language Product Discovery</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0F14;
+    --surface: #131920;
+    --surface-2: #1A2230;
+    --surface-3: #222D3D;
+    --border: #2A3546;
+    --text: #E8ECF1;
+    --text-muted: #8B9BB4;
+    --text-dim: #5A6A82;
+    --accent: #3B82F6;
+    --accent-glow: rgba(59, 130, 246, 0.15);
+    --accent-2: #10B981;
+    --accent-3: #F59E0B;
+    --accent-4: #EF4444;
+    --tag-bg: rgba(59, 130, 246, 0.1);
+    --tag-border: rgba(59, 130, 246, 0.25);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font: 'DM Sans', -apple-system, sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background glow */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 600px;
+    background: radial-gradient(ellipse, rgba(59,130,246,0.06) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 24px;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+  }
+
+  .logo-text {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .logo-text span {
+    background: linear-gradient(135deg, var(--accent), #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header h1 {
+    font-size: 42px;
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 17px;
+    line-height: 1.6;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  /* SEARCH BOX */
+  .search-container {
+    position: relative;
+    margin-bottom: 16px;
+  }
+
+  .search-box {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 60px 20px 52px;
+    font-family: var(--font);
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.25s, box-shadow 0.25s;
+  }
+
+  .search-box::placeholder {
+    color: var(--text-dim);
+  }
+
+  .search-box:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow), 0 8px 32px rgba(0,0,0,0.3);
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim);
+    font-size: 18px;
+    pointer-events: none;
+  }
+
+  .search-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--accent), #6366F1);
+    border: none;
+    border-radius: 10px;
+    width: 44px;
+    height: 44px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+
+  .search-btn:hover {
+    transform: translateY(-50%) scale(1.05);
+    box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+  }
+
+  /* EXAMPLE CHIPS */
+  .examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 48px;
+  }
+
+  .chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 13px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font);
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-glow);
+  }
+
+  /* AI INTENT PANEL */
+  .intent-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 32px;
+    display: none;
+    animation: slideUp 0.4s ease;
+  }
+
+  .intent-panel.visible {
+    display: block;
+  }
+
+  .intent-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .intent-header .sparkle {
+    font-size: 16px;
+  }
+
+  .intent-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  .intent-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .intent-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--tag-bg);
+    border: 1px solid var(--tag-border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: var(--accent);
+  }
+
+  .intent-tag .label {
+    color: var(--text-dim);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .intent-tag.green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: var(--accent-2); }
+  .intent-tag.yellow { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: var(--accent-3); }
+  .intent-tag.red { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: var(--accent-4); }
+
+  /* RESULTS */
+  .results-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  .results-header.visible {
+    display: flex;
+  }
+
+  .results-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .results-count {
+    font-size: 13px;
+    color: var(--text-muted);
+    font-family: var(--mono);
+  }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+
+  /* PRODUCT CARD */
+  .product-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 24px;
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    animation: slideUp 0.5s ease both;
+    cursor: default;
+  }
+
+  .product-card:nth-child(1) { animation-delay: 0.05s; }
+  .product-card:nth-child(2) { animation-delay: 0.12s; }
+  .product-card:nth-child(3) { animation-delay: 0.19s; }
+  .product-card:nth-child(4) { animation-delay: 0.26s; }
+
+  .product-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+  }
+
+  .product-img {
+    width: 120px;
+    height: 120px;
+    background: var(--surface-2);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    user-select: none;
+  }
+
+  .product-info {
+    min-width: 0;
+  }
+
+  .product-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+
+  .product-name {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .match-score {
+    flex-shrink: 0;
+    background: var(--accent-glow);
+    border: 1px solid var(--tag-border);
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+
+  .product-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+
+  .price {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent-2);
+  }
+
+  .rating {
+    font-size: 13px;
+    color: var(--accent-3);
+  }
+
+  .brand {
+    font-size: 12px;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  .ai-reason {
+    background: linear-gradient(135deg, rgba(59,130,246,0.06), rgba(139,92,246,0.06));
+    border: 1px solid rgba(59,130,246,0.12);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+
+  .ai-reason strong {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* LOADING STATE */
+  .loading {
+    text-align: center;
+    padding: 60px 20px;
+    display: none;
+  }
+
+  .loading.visible {
+    display: block;
+  }
+
+  .loading-dots {
+    display: inline-flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .loading-dots span {
+    width: 10px;
+    height: 10px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .loading-dots span:nth-child(2) { animation-delay: 0.15s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+  .loading p {
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-state .icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .empty-state p {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 32px 0;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+
+  .footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  /* HOW IT WORKS */
+  .how-it-works {
+    margin-bottom: 48px;
+  }
+
+  .how-it-works h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .step-num {
+    width: 32px;
+    height: 32px;
+    background: var(--accent-glow);
+    border: 1px solid var(--tag-border);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+    font-family: var(--mono);
+  }
+
+  .step h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .step p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  /* ANIMATIONS */
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: scale(0.6); opacity: 0.3; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    .header h1 { font-size: 28px; }
+    .product-card { grid-template-columns: 1fr; }
+    .product-img { width: 100%; height: 140px; }
+    .steps { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">Smart<span>Search</span></div>
+    </div>
+    <h1>Search products like you'd<br>ask a friend</h1>
+    <p>Describe what you need in plain English. Our AI understands your intent, budget, and preferences — then finds the best matches.</p>
+  </div>
+
+  <!-- SEARCH -->
+  <div class="search-container">
+    <div class="search-icon">🔍</div>
+    <input class="search-box" id="searchInput" type="text" placeholder="e.g. &quot;a durable backpack for college under ₹2000&quot;">
+    <button class="search-btn" id="searchBtn" onclick="handleSearch()">→</button>
+  </div>
+
+  <!-- EXAMPLE CHIPS -->
+  <div class="examples">
+    <div class="chip" onclick="setQuery(this)">lightweight running shoes under ₹3000</div>
+    <div class="chip" onclick="setQuery(this)">noise cancelling headphones for flights</div>
+    <div class="chip" onclick="setQuery(this)">ergonomic office chair for back pain</div>
+    <div class="chip" onclick="setQuery(this)">waterproof phone case for beach trips</div>
+    <div class="chip" onclick="setQuery(this)">minimalist wallet that fits front pocket</div>
+  </div>
+
+  <!-- AI INTENT PANEL -->
+  <div class="intent-panel" id="intentPanel">
+    <div class="intent-header">
+      <span class="sparkle">✨</span>
+      <h3>AI Understood Your Intent</h3>
+    </div>
+    <div class="intent-tags" id="intentTags"></div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="loading" id="loading">
+    <div class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
+    <p>Understanding your query & finding matches...</p>
+  </div>
+
+  <!-- RESULTS HEADER -->
+  <div class="results-header" id="resultsHeader">
+    <h2>Best Matches</h2>
+    <div class="results-count" id="resultsCount"></div>
+  </div>
+
+  <!-- RESULTS GRID -->
+  <div class="results-grid" id="resultsGrid"></div>
+
+  <!-- EMPTY STATE (initial) -->
+  <div class="empty-state" id="emptyState">
+    <div class="icon">🛍️</div>
+    <p>Type a natural language query above to discover products.<br>No filters. No keywords. Just describe what you need.</p>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-it-works">
+    <h2>How SmartSearch Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h3>Parse Intent</h3>
+        <p>AI extracts product type, budget, key attributes, and use-case from your natural language query.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h3>Semantic Match</h3>
+        <p>Products are ranked by multi-dimensional relevance — not just keyword overlap but contextual fit.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h3>Explain & Rank</h3>
+        <p>Each result includes an AI-generated explanation of why it matches your specific needs.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    SmartSearch AI — A portfolio project demonstrating AI-powered natural language product discovery.<br>
+    Built as an <a href="#">AI Product Manager</a> case study.
+  </div>
+
+</div>
+
+<script>
+// ========== PRODUCT DATABASE ==========
+const products = [
+  { id: 1, name: "AirStride Pro Running Shoes", brand: "UrbanStep", price: 2499, rating: 4.5, emoji: "👟",
+    attrs: ["lightweight","breathable","running","sports","cushioned","mesh","durable","comfort","gym","jogging"],
+    desc: "Ultra-light mesh running shoes with responsive cushioning, weighing just 220g." },
+  { id: 2, name: "CloudFoam Trail Runner", brand: "TerraPace", price: 3199, rating: 4.7, emoji: "🥾",
+    attrs: ["trail","running","waterproof","grip","outdoor","hiking","durable","adventure","traction","all-terrain"],
+    desc: "Trail running shoes with waterproof membrane and aggressive grip for off-road terrain." },
+  { id: 3, name: "QuietZone ANC Headphones", brand: "SoundSphere", price: 4999, rating: 4.8, emoji: "🎧",
+    attrs: ["noise cancelling","headphones","wireless","bluetooth","travel","flight","anc","premium","long battery","comfortable"],
+    desc: "Premium ANC headphones with 40hr battery and adaptive noise cancellation for travel." },
+  { id: 4, name: "BassWave Wireless Earbuds", brand: "SoundSphere", price: 1999, rating: 4.3, emoji: "🎵",
+    attrs: ["earbuds","wireless","bluetooth","bass","music","compact","gym","waterproof","budget","portable"],
+    desc: "Compact wireless earbuds with deep bass and IPX5 water resistance." },
+  { id: 5, name: "ErgoMax Lumbar Support Chair", brand: "DeskPro", price: 12999, rating: 4.6, emoji: "🪑",
+    attrs: ["ergonomic","office chair","lumbar","back pain","posture","adjustable","mesh","work from home","desk","comfortable"],
+    desc: "Fully adjustable ergonomic chair with 4D armrests and adaptive lumbar support." },
+  { id: 6, name: "FlexSeat Mesh Office Chair", brand: "ComfortZone", price: 7499, rating: 4.2, emoji: "💺",
+    attrs: ["office chair","mesh","breathable","affordable","ergonomic","adjustable","desk","work","tilt","swivel"],
+    desc: "Breathable mesh office chair with adjustable height and tilt lock mechanism." },
+  { id: 7, name: "AquaShield Pro Phone Case", brand: "TechArmor", price: 899, rating: 4.4, emoji: "📱",
+    attrs: ["waterproof","phone case","beach","pool","underwater","protective","clear","touchscreen","floating","durable"],
+    desc: "IP68 waterproof phone case with touch sensitivity and floating design for water activities." },
+  { id: 8, name: "TitanGrip Rugged Phone Case", brand: "TechArmor", price: 1299, rating: 4.5, emoji: "🛡️",
+    attrs: ["phone case","rugged","drop protection","military","durable","shockproof","heavy duty","construction","outdoor"],
+    desc: "Military-grade drop protection case tested to survive 3m drops on concrete." },
+  { id: 9, name: "SlimFold Carbon Wallet", brand: "UrbanCarry", price: 1499, rating: 4.6, emoji: "💳",
+    attrs: ["wallet","slim","minimalist","front pocket","rfid","carbon fiber","compact","card holder","lightweight","modern"],
+    desc: "Ultra-slim carbon fiber wallet holding 8 cards, fits front pocket with RFID blocking." },
+  { id: 10, name: "ClassicFold Leather Wallet", brand: "UrbanCarry", price: 999, rating: 4.1, emoji: "👛",
+    attrs: ["wallet","leather","classic","bifold","card holder","coin pocket","traditional","gift","men","everyday"],
+    desc: "Genuine leather bifold wallet with coin pocket and 6 card slots." },
+  { id: 11, name: "TrekPack 30L Backpack", brand: "NomadGear", price: 1799, rating: 4.5, emoji: "🎒",
+    attrs: ["backpack","college","laptop","durable","30L","waterproof","padded","school","travel","compartments"],
+    desc: "30L laptop backpack with waterproof fabric, padded straps, and 5 compartments." },
+  { id: 12, name: "DayLite Compact Backpack", brand: "NomadGear", price: 1299, rating: 4.3, emoji: "🎒",
+    attrs: ["backpack","compact","lightweight","daily","commute","minimalist","urban","foldable","travel","20L"],
+    desc: "Lightweight 20L daily backpack that folds flat, perfect for urban commutes." },
+  { id: 13, name: "PowerSurge 20000mAh Bank", brand: "VoltEdge", price: 1599, rating: 4.4, emoji: "🔋",
+    attrs: ["power bank","20000mAh","fast charging","usb-c","portable","travel","phone charger","laptop charging","durable"],
+    desc: "20000mAh power bank with 65W USB-C fast charging for phones and laptops." },
+  { id: 14, name: "FitPulse Smart Band", brand: "HealthSync", price: 2999, rating: 4.3, emoji: "⌚",
+    attrs: ["fitness tracker","smart band","heart rate","sleep","steps","waterproof","health","exercise","notifications","budget"],
+    desc: "Fitness band with heart rate, SpO2, sleep tracking, and 14-day battery life." },
+  { id: 15, name: "BrewMaster Pour-Over Kit", brand: "CaféCraft", price: 2199, rating: 4.7, emoji: "☕",
+    attrs: ["coffee","pour over","manual","brewing","kitchen","gift","artisan","glass","filter","barista"],
+    desc: "Complete pour-over coffee set with borosilicate carafe, stainless filter, and gooseneck kettle." },
+  { id: 16, name: "ZenGlow Desk Lamp", brand: "LumiCraft", price: 1899, rating: 4.5, emoji: "💡",
+    attrs: ["desk lamp","led","adjustable","eye care","study","reading","usb charging","dimmable","modern","office"],
+    desc: "Eye-care LED desk lamp with 5 brightness levels, color temperature control, and USB port." },
+];
+
+// ========== AI INTENT PARSER ==========
+function parseIntent(query) {
+  const q = query.toLowerCase();
+  const intent = { category: null, budget: null, attrs: [], useCase: null, priority: null };
+
+  // Category detection
+  const categoryMap = {
+    'shoe|running|sneaker|trainer': 'Footwear',
+    'headphone|earphone|earbud|audio|anc': 'Audio',
+    'chair|seating|desk chair': 'Office Furniture',
+    'phone case|cover|protector': 'Phone Accessories',
+    'wallet|card holder|billfold': 'Wallets',
+    'backpack|bag|rucksack': 'Bags',
+    'power bank|charger|battery pack': 'Charging',
+    'fitness|tracker|smart band|watch': 'Wearables',
+    'coffee|brew|pour over': 'Coffee & Kitchen',
+    'lamp|light|lighting': 'Lighting',
+  };
+
+  for (const [pattern, cat] of Object.entries(categoryMap)) {
+    if (new RegExp(pattern).test(q)) { intent.category = cat; break; }
+  }
+
+  // Budget extraction
+  const budgetMatch = q.match(/(?:under|below|within|max|upto|up to|budget)[\s₹$]*(\d[\d,]*)/);
+  if (budgetMatch) intent.budget = parseInt(budgetMatch[1].replace(/,/g, ''));
+  const priceRange = q.match(/(\d[\d,]*)\s*[-–to]+\s*(\d[\d,]*)/);
+  if (priceRange) intent.budget = parseInt(priceRange[2].replace(/,/g, ''));
+
+  // Attribute extraction
+  const attrKeywords = [
+    'lightweight','light','heavy duty','durable','waterproof','wireless','bluetooth','ergonomic',
+    'comfortable','premium','budget','compact','slim','minimalist','portable','travel','gym',
+    'outdoor','rugged','noise cancel','anc','breathable','cushion','padded','fast charg',
+    'adjustable','foldable','modern','classic','rfid','mesh','leather','led','usb',
+  ];
+  attrKeywords.forEach(kw => { if (q.includes(kw)) intent.attrs.push(kw); });
+
+  // Use-case detection
+  const useCases = {
+    'college|school|study|student': 'College / Student',
+    'travel|flight|airport|trip': 'Travel',
+    'gym|workout|exercise|fitness|running|jogging': 'Fitness & Sports',
+    'office|work|desk|wfh|work from home': 'Office / WFH',
+    'beach|pool|water|swim': 'Water Activities',
+    'commute|daily|everyday|urban': 'Daily Commute',
+    'gift|present': 'Gifting',
+    'back pain|posture|lumbar|spine': 'Health & Ergonomics',
+    'outdoor|adventure|hiking|trail': 'Outdoor Adventure',
+  };
+  for (const [pattern, uc] of Object.entries(useCases)) {
+    if (new RegExp(pattern).test(q)) { intent.useCase = uc; break; }
+  }
+
+  // Priority detection
+  if (/cheap|budget|affordable|low cost|value/.test(q)) intent.priority = 'Value for Money';
+  else if (/best|premium|top|high end|quality/.test(q)) intent.priority = 'Quality';
+  else if (/durable|long last|tough|rugged/.test(q)) intent.priority = 'Durability';
+  else if (/comfort|ergonomic|soft|cushion/.test(q)) intent.priority = 'Comfort';
+
+  return intent;
+}
+
+// ========== SCORING ENGINE ==========
+function scoreProducts(query, intent) {
+  const q = query.toLowerCase();
+  const words = q.split(/\s+/).filter(w => w.length > 2);
+
+  return products.map(p => {
+    let score = 0;
+    let reasons = [];
+    const pText = (p.name + ' ' + p.desc + ' ' + p.attrs.join(' ')).toLowerCase();
+
+    // Category match (30pts)
+    if (intent.category) {
+      const catProducts = { 'Footwear': [1,2], 'Audio': [3,4], 'Office Furniture': [5,6],
+        'Phone Accessories': [7,8], 'Wallets': [9,10], 'Bags': [11,12], 'Charging': [13],
+        'Wearables': [14], 'Coffee & Kitchen': [15], 'Lighting': [16] };
+      if (catProducts[intent.category]?.includes(p.id)) {
+        score += 30;
+        reasons.push('Category match');
+      }
+    }
+
+    // Keyword match (up to 25pts)
+    let kwScore = 0;
+    words.forEach(w => {
+      if (pText.includes(w)) kwScore += 5;
+    });
+    score += Math.min(kwScore, 25);
+    if (kwScore > 10) reasons.push('Strong keyword relevance');
+
+    // Attribute match (up to 20pts)
+    let attrScore = 0;
+    intent.attrs.forEach(a => {
+      if (p.attrs.some(pa => pa.includes(a) || a.includes(pa))) attrScore += 7;
+    });
+    score += Math.min(attrScore, 20);
+    if (attrScore > 0) reasons.push('Matches key attributes');
+
+    // Budget fit (15pts)
+    if (intent.budget) {
+      if (p.price <= intent.budget) { score += 15; reasons.push(`Within ₹${intent.budget.toLocaleString()} budget`); }
+      else if (p.price <= intent.budget * 1.15) { score += 5; reasons.push('Slightly above budget but strong match'); }
+    }
+
+    // Rating bonus (up to 10pts)
+    score += Math.round((p.rating - 4) * 14);
+    if (p.rating >= 4.5) reasons.push(`Highly rated (${p.rating}★)`);
+
+    // Normalize to percentage
+    const maxPossible = 100;
+    const matchPct = Math.min(Math.round((score / maxPossible) * 100), 99);
+
+    return { ...p, score: matchPct, reasons };
+  })
+  .filter(p => p.score > 20)
+  .sort((a, b) => b.score - a.score)
+  .slice(0, 4);
+}
+
+// ========== UI RENDERING ==========
+function renderIntent(intent) {
+  const panel = document.getElementById('intentPanel');
+  const tags = document.getElementById('intentTags');
+  tags.innerHTML = '';
+
+  if (intent.category) tags.innerHTML += `<div class="intent-tag"><span class="label">Category</span>${intent.category}</div>`;
+  if (intent.budget) tags.innerHTML += `<div class="intent-tag green"><span class="label">Budget</span>≤ ₹${intent.budget.toLocaleString()}</div>`;
+  if (intent.useCase) tags.innerHTML += `<div class="intent-tag yellow"><span class="label">Use Case</span>${intent.useCase}</div>`;
+  intent.attrs.slice(0, 3).forEach(a => {
+    tags.innerHTML += `<div class="intent-tag red"><span class="label">Attribute</span>${a}</div>`;
+  });
+  if (intent.priority) tags.innerHTML += `<div class="intent-tag"><span class="label">Priority</span>${intent.priority}</div>`;
+
+  panel.classList.add('visible');
+}
+
+function renderResults(results) {
+  const grid = document.getElementById('resultsGrid');
+  const header = document.getElementById('resultsHeader');
+  const count = document.getElementById('resultsCount');
+  const empty = document.getElementById('emptyState');
+
+  grid.innerHTML = '';
+  empty.style.display = 'none';
+
+  if (results.length === 0) {
+    header.classList.remove('visible');
+    empty.style.display = 'block';
+    empty.innerHTML = '<div class="icon">🤷</div><p>No strong matches found. Try rephrasing your query<br>or being more specific about what you need.</p>';
+    return;
+  }
+
+  header.classList.add('visible');
+  count.textContent = `${results.length} products matched`;
+
+  results.forEach(p => {
+    const reasonText = p.reasons.slice(0, 3).join(' · ');
+    grid.innerHTML += `
+      <div class="product-card">
+        <div class="product-img">${p.emoji}</div>
+        <div class="product-info">
+          <div class="product-top">
+            <div class="product-name">${p.name}</div>
+            <div class="match-score">${p.score}% match</div>
+          </div>
+          <div class="product-meta">
+            <span class="price">₹${p.price.toLocaleString()}</span>
+            <span class="rating">${'★'.repeat(Math.floor(p.rating))}${'☆'.repeat(5 - Math.floor(p.rating))} ${p.rating}</span>
+            <span class="brand">${p.brand}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">${p.desc}</div>
+          <div class="ai-reason"><strong>AI Match Reason:</strong> ${reasonText}</div>
+        </div>
+      </div>`;
+  });
+}
+
+// ========== SEARCH HANDLER ==========
+function handleSearch() {
+  const query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+
+  // Reset
+  document.getElementById('intentPanel').classList.remove('visible');
+  document.getElementById('resultsHeader').classList.remove('visible');
+  document.getElementById('resultsGrid').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'none';
+
+  // Show loading
+  const loading = document.getElementById('loading');
+  loading.classList.add('visible');
+
+  // Simulate AI processing time
+  setTimeout(() => {
+    const intent = parseIntent(query);
+    renderIntent(intent);
+
+    setTimeout(() => {
+      loading.classList.remove('visible');
+      const results = scoreProducts(query, intent);
+      renderResults(results);
+    }, 600);
+  }, 800);
+}
+
+function setQuery(el) {
+  document.getElementById('searchInput').value = el.textContent;
+  handleSearch();
+}
+
+// Enter key handler
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleSearch();
+});
+</script>
+</body>
+</html>
