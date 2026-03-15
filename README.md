@@ -4,6 +4,7 @@
 
 SmartSearch AI replaces traditional keyword + filter search with a **natural language interface** that understands what you actually need. Type a query like *"lightweight running shoes under ₹3000"* and get AI-ranked results with explanations for every match.
 
+ 🔗 **[Live Demo](https://shruticreates01-ship-it.github.io/smart-search-ai/)**
 ![SmartSearch Demo](assets/demo-screenshot.png)
 
 ---
